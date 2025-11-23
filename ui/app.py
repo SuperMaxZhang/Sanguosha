@@ -33,11 +33,18 @@ class MainWindow(QMainWindow):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         
-        # 游戏信息
+        # 游戏信息 + ➕按钮
+        header_layout = QHBoxLayout()
         info_label = QLabel("游戏信息")
         info_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #333;")
-        right_layout.addWidget(info_label)
-        
+        header_layout.addWidget(info_label)
+        header_layout.addStretch()
+        self.btn_hero_info = QPushButton("➕")
+        self.btn_hero_info.setToolTip("武将信息 (H)")
+        self.btn_hero_info.setFixedSize(32, 24)
+        self.btn_hero_info.setStyleSheet("QPushButton{background-color:#e3f2fd;color:#1976D2;border:1px solid #90CAF9;border-radius:6px;font-size:14px;font-weight:bold;padding:2px 6px;}QPushButton:hover{background-color:#BBDEFB;}QPushButton:pressed{background-color:#90CAF9;}")
+        header_layout.addWidget(self.btn_hero_info)
+        right_layout.addLayout(header_layout)
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         self.info_text.setMaximumHeight(150)
@@ -170,6 +177,7 @@ class MainWindow(QMainWindow):
         self.btn_use.clicked.connect(self.on_use_card)
         self.btn_end.clicked.connect(self.on_end)
         self.btn_restart.clicked.connect(self.on_restart)
+        self.btn_hero_info.clicked.connect(self.show_hero_info)
         
         # 初始化显示
         self.update_info()
