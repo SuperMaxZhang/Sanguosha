@@ -9,12 +9,22 @@ class ResponseDialog(QDialog):
         self.setMinimumWidth(380)
         self.request = request
         self.selected_index = None
+        self.use_bagua = False
         
         layout = QVBoxLayout(self)
         
         title = QLabel(f"{request.source_player.name} 对 {request.target_player.name} 使用了【{request.context.get('damage_card').name if request.context and request.context.get('damage_card') else '牌'}】")
         title.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(title)
+        
+        # 检查是否装备八卦阵
+        player = request.target_player
+        has_bagua = any(hasattr(eq, 'name') and eq.name == "八卦阵" for eq in player.equip)
+        
+        if has_bagua and request.request_type == "dodge_slash":
+            bagua_tip = QLabel("你装备了【八卦阵】，可以选择进行判定代替出闪")
+            bagua_tip.setStyleSheet("color: #d4af37; font-weight: bold;")
+            layout.addWidget(bagua_tip)
         
         tip = QLabel("请选择是否使用响应牌：")
         tip.setStyleSheet("color: #666;")
@@ -26,7 +36,6 @@ class ResponseDialog(QDialog):
         
         # 填充手牌中符合条件的响应牌
         from engine.cards.basic import Dodge, Peach, Slash
-        player = request.target_player
         for i, card in enumerate(player.hand):
             if request.request_type == "dodge_slash" and isinstance(card, Dodge):
                 item = QListWidgetItem(f"{card.suit}{card.rank}  {card.name}")
@@ -44,6 +53,13 @@ class ResponseDialog(QDialog):
         
         btns = QHBoxLayout()
         use_btn = QPushButton("使用")
+        
+        # 如果有八卦阵，添加判定按钮
+        if has_bagua and request.request_type == "dodge_slash":
+            bagua_btn = QPushButton("八卦阵判定")
+            bagua_btn.clicked.connect(self.on_bagua)
+            btns.addWidget(bagua_btn)
+        
         cancel_btn = QPushButton("不响应")
         btns.addWidget(use_btn)
         btns.addWidget(cancel_btn)
@@ -51,6 +67,12 @@ class ResponseDialog(QDialog):
         
         use_btn.clicked.connect(self.on_use)
         cancel_btn.clicked.connect(self.on_cancel)
+    
+    def on_bagua(self):
+        """使用八卦阵判定"""
+        self.selected_index = None
+        self.use_bagua = True
+        self.accept()
     
     def on_use(self):
         item = self.list.currentItem()

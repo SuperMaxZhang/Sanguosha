@@ -3,6 +3,7 @@ from engine.cards.basic import Slash, Dodge, Peach
 from engine.cards.trick import Dismantle, Snatch, ExNihilo, Duel
 from engine.cards.equip import (
     ZhuGeLianNu, QingGangJian, ZhangBaSheMao,
+    BaGuaZhen, RenWangDun,
     ChiTu, DaWan, ZiXing, ZhuaHuangFeiDian, JueYing, DiLu
 )
 
@@ -52,12 +53,15 @@ class Deck:
         
         self.cards.extend(tricks)
         
-        # 添加装备牌（部分）
+        # 添加装备牌
         equips = []
         # 武器 3张
         equips.append(ZhuGeLianNu("♦", "A"))
         equips.append(QingGangJian("♠", "6"))
         equips.append(ZhangBaSheMao("♠", "12"))
+        # 防具 2张
+        equips.append(BaGuaZhen("♠", "2"))
+        equips.append(RenWangDun("♣", "2"))
         # +1马 3张
         equips.append(ChiTu("♥", "5"))
         equips.append(DaWan("♠", "13"))

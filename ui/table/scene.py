@@ -91,6 +91,23 @@ class PlayerPanel(QGraphicsRectItem):
             if skill_names:
                 skill_text = "\n" + " ".join(skill_names)
         
+        # 获取装备显示
+        equip_text = ""
+        if self.player.equip:
+            equip_icons = []
+            for eq in self.player.equip:
+                if hasattr(eq, 'equip_type'):
+                    if eq.equip_type == "weapon":
+                        equip_icons.append("⚔")
+                    elif eq.equip_type == "armor":
+                        equip_icons.append("Ὦ1")
+                    elif eq.equip_type == "plus_horse":
+                        equip_icons.append("+1")
+                    elif eq.equip_type == "minus_horse":
+                        equip_icons.append("-1")
+            if equip_icons:
+                equip_text = " [" + "".join(equip_icons) + "]"
+        
         # 更新文本 - 优化显示，避免文字过长
         name_suffix = " (电脑)" if self.player.is_ai else " (你)"
         hero_name = f" - {self.player.hero.name}" if self.player.hero else ""
@@ -102,7 +119,7 @@ class PlayerPanel(QGraphicsRectItem):
         else:
             display_name = f"{self.player.name}{role_display}{name_suffix}"
         
-        info = f"{display_name}\n手牌: {len(self.player.hand)}{skill_text}"
+        info = f"{display_name}{equip_text}\n手牌: {len(self.player.hand)}{skill_text}"
         self.text.setPlainText(info)
         
         # 根据面板大小调整字体

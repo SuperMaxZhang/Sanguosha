@@ -53,6 +53,24 @@ class ResponseSystem:
         request = self.pending_request
         player = request.target_player
         
+        # 检查是否可以使用八卦阵
+        if request.request_type == "dodge_slash" and card_index is None:
+            has_bagua = any(hasattr(eq, 'name') and eq.name == "八卦阵" for eq in player.equip)
+            if has_bagua:
+                # 八卦阵：进行判定，红色视为闪
+                judge_card = self.game.deck.draw()
+                self.game.log(f"{player.name} 发动【八卦阵】，判定牌为 {judge_card.suit}{judge_card.rank}")
+                self.game.deck.discard(judge_card)
+                
+                if judge_card.suit in ["♥", "♦"]:  # 红色
+                    self.game.log(f"判定成功，视为使用了【闪】")
+                    request.responded = True
+                    self.pending_request = None
+                    return True
+                else:
+                    self.game.log(f"判定失败")
+                    # 继续执行下面的伤害结算
+        
         if card_index is not None and 0 <= card_index < len(player.hand):
             card = player.hand[card_index]
             
@@ -78,6 +96,15 @@ class ResponseSystem:
         if request.request_type == "dodge_slash":
             source = request.source_player
             target = request.target_player
+            
+            # 检查仁王盾：黑色杀无效
+            has_renwang = any(hasattr(eq, 'name') and eq.name == "仁王盾" for eq in target.equip)
+            damage_card = request.context.get("damage_card")
+            if has_renwang and damage_card and damage_card.suit in ["♠", "♣"]:
+                self.game.log(f"{target.name} 的【仁王盾】生效，黑色【杀】无效")
+                self.pending_request = None
+                return False
+            
             target.hp -= 1
             self.game.log(f"{target.name} 受到1点伤害，剩余体力: {target.hp}")
             # 检查死亡
@@ -93,6 +120,9 @@ class ResponseSystem:
         if request.request_type == "dodge_slash":
             # 响应杀：需要闪
             return isinstance(card, Dodge)
+        elif request.request_type == "bagua_judge":
+            # 八卦阵判定：无需卡牌（由判定系统处理）
+            return False
         elif request.request_type == "peach_dying":
             # 濒死求桃：需要桃
             return isinstance(card, Peach)
@@ -112,6 +142,23 @@ class ResponseSystem:
         response_card_index = None
         
         if request.request_type == "dodge_slash":
+            # 检查是否装备八卦阵
+            has_bagua = any(hasattr(eq, 'name') and eq.name == "八卦阵" for eq in player.equip)
+            if has_bagua:
+                # 八卦阵：进行判定，红色视为闪
+                judge_card = self.game.deck.draw()
+                self.game.log(f"{player.name} 发动【八卦阵】，判定牌为 {judge_card.suit}{judge_card.rank}")
+                self.game.deck.discard(judge_card)
+                
+                if judge_card.suit in ["♥", "♦"]:  # 红色
+                    self.game.log(f"判定成功，视为使用了【闪】")
+                    request.responded = True
+                    self.pending_request = None
+                    return True
+                else:
+                    self.game.log(f"判定失败")
+                    # 继续查找手牌中的闪
+            
             # 查找闪
             for i, card in enumerate(player.hand):
                 if isinstance(card, Dodge):
