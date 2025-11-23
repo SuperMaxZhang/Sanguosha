@@ -23,14 +23,26 @@ class CardItem(QGraphicsRectItem):
         
         # 卡牌文本
         self.text = QGraphicsTextItem(self)
-        font = QFont("Arial", 12, QFont.Bold)
-        self.text.setFont(font)
         self.update_text()
         
     def update_text(self):
         # 显示花色、点数和牌名
         text = f"{self.card.suit}{self.card.rank}\n{self.card.name}"
+        
+        # 如果是装备牌，显示能力说明
+        if hasattr(self.card, 'description') and self.card.description:
+            text += f"\n{self.card.description}"
+        
         self.text.setPlainText(text)
+        
+        # 根据卡牌大小调整字体
+        if hasattr(self.card, 'description') and self.card.description:
+            # 装备牌有说明，字体稍小
+            font = QFont("Arial", 9)
+        else:
+            font = QFont("Arial", 12, QFont.Bold)
+        self.text.setFont(font)
+        
         # 居中
         bounds = self.text.boundingRect()
         self.text.setPos(
