@@ -217,6 +217,10 @@ class Game:
         if ai:
             ai.play_turn()
     
+    def get_alive_players(self):
+        """获取所有存活的玩家"""
+        return [p for p in self.players if p.is_alive]
+    
     def check_game_over(self):
         """检查游戏是否结束，返回获胜方"""
         alive_players = self.get_alive_players()

@@ -91,22 +91,37 @@ class PlayerPanel(QGraphicsRectItem):
             if skill_names:
                 skill_text = "\n" + " ".join(skill_names)
         
-        # 获取装备显示
+        # 获取装备显示（文本形式）
         equip_text = ""
         if self.player.equip:
-            equip_icons = []
+            equip_parts = []
+            weapon = None
+            armor = None
+            plus_horse = None
+            minus_horse = None
+            
             for eq in self.player.equip:
                 if hasattr(eq, 'equip_type'):
                     if eq.equip_type == "weapon":
-                        equip_icons.append("⚔")
+                        weapon = eq.name
                     elif eq.equip_type == "armor":
-                        equip_icons.append("Ὦ1")
+                        armor = eq.name
                     elif eq.equip_type == "plus_horse":
-                        equip_icons.append("+1")
+                        plus_horse = eq.name
                     elif eq.equip_type == "minus_horse":
-                        equip_icons.append("-1")
-            if equip_icons:
-                equip_text = " [" + "".join(equip_icons) + "]"
+                        minus_horse = eq.name
+            
+            if weapon:
+                equip_parts.append(f"武器:{weapon}")
+            if armor:
+                equip_parts.append(f"防具:{armor}")
+            if plus_horse:
+                equip_parts.append(f"+1:{plus_horse}")
+            if minus_horse:
+                equip_parts.append(f"-1:{minus_horse}")
+            
+            if equip_parts:
+                equip_text = "\n" + " ".join(equip_parts)
         
         # 更新文本 - 优化显示，避免文字过长
         name_suffix = " (电脑)" if self.player.is_ai else " (你)"
@@ -119,7 +134,7 @@ class PlayerPanel(QGraphicsRectItem):
         else:
             display_name = f"{self.player.name}{role_display}{name_suffix}"
         
-        info = f"{display_name}{equip_text}\n手牌: {len(self.player.hand)}{skill_text}"
+        info = f"{display_name}\n手牌: {len(self.player.hand)}{skill_text}{equip_text}"
         self.text.setPlainText(info)
         
         # 根据面板大小调整字体
