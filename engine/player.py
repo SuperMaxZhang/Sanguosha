@@ -41,8 +41,9 @@ class Player:
         # 执行效果
         card.use(self, targets, game)
         
-        # 进入弃牌堆
-        game.deck.discard(card)
+        # 进入弃牌堆（装备牌不进入，已在use中加入装备区）
+        if card.card_type != "equip":
+            game.deck.discard(card)
         
         # 效果执行后再次触发事件，用于刷新UI
         game.emit_event("card_effect_done", source=self, card=card, target=target_player)
@@ -50,8 +51,13 @@ class Player:
         return True
 
     def get_attack_range(self):
-        """基础攻击范围：默认1；后续可由装备修改"""
-        return 1
+        """计算攻击范围：基础=1，装备武器后使用武器范围"""
+        # 查找装备区中的武器
+        for eq in self.equip:
+            if hasattr(eq, 'equip_type') and eq.equip_type == "weapon":
+                if hasattr(eq, 'attack_range'):
+                    return eq.attack_range
+        return 1  # 默认范围
     def reset_turn(self):
         """重置回合状态"""
         self.slash_used_this_turn = False

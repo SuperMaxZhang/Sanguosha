@@ -1,6 +1,10 @@
 import random
 from engine.cards.basic import Slash, Dodge, Peach
 from engine.cards.trick import Dismantle, Snatch, ExNihilo, Duel
+from engine.cards.equip import (
+    ZhuGeLianNu, QingGangJian, ZhangBaSheMao,
+    ChiTu, DaWan, ZiXing, ZhuaHuangFeiDian, JueYing, DiLu
+)
 
 
 class Deck:
@@ -28,7 +32,7 @@ class Deck:
         random.shuffle(self.cards)
 
     def build_standard(self):
-        """标准版完整牌堆：基本牌53 + 锦囊35 + 装备18"""
+        """标准版完整牌堆：基本牌53 + 锦囊35 + 装妇9"""
         self.build_basic()
         
         # 添加锦囊牌
@@ -47,6 +51,23 @@ class Deck:
             tricks.append(Duel("♠" if i < 2 else "♣", str(i + 1)))
         
         self.cards.extend(tricks)
+        
+        # 添加装备牌（部分）
+        equips = []
+        # 武器 3张
+        equips.append(ZhuGeLianNu("♦", "A"))
+        equips.append(QingGangJian("♠", "6"))
+        equips.append(ZhangBaSheMao("♠", "12"))
+        # +1马 3张
+        equips.append(ChiTu("♥", "5"))
+        equips.append(DaWan("♠", "13"))
+        equips.append(ZiXing("♦", "13"))
+        # -1马 3张
+        equips.append(ZhuaHuangFeiDian("♥", "13"))
+        equips.append(JueYing("♠", "5"))
+        equips.append(DiLu("♣", "5"))
+        
+        self.cards.extend(equips)
         random.shuffle(self.cards)
 
     def draw(self):

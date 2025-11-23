@@ -187,13 +187,28 @@ class Game:
         self.finish_turn()
     
     def distance(self, a: Player, b: Player):
-        """基础距离计算：按照座位顺序的环形最短距离（暂不考虑坐骑修正）"""
+        """距离计算：环形最短距离 + 装备修正（+1马、-1马）"""
         try:
             n = len(self.players)
             ia = next(i for i, p in enumerate(self.players) if p is a)
             ib = next(i for i, p in enumerate(self.players) if p is b)
             d = abs(ia - ib)
-            return min(d, n - d)
+            base_dist = min(d, n - d)
+            
+            # 装备修正
+            # a的-1马：计算与a的距离-1
+            for eq in a.equip:
+                if hasattr(eq, 'equip_type') and eq.equip_type == "minus_horse":
+                    base_dist -= 1
+                    break
+            
+            # b的+1马：计算与b的距离+1
+            for eq in b.equip:
+                if hasattr(eq, 'equip_type') and eq.equip_type == "plus_horse":
+                    base_dist += 1
+                    break
+            
+            return max(1, base_dist)  # 距离最小为1
         except StopIteration:
             return 999
     def ai_play_turn(self):
