@@ -9,10 +9,12 @@ class Player:
         self.hero = hero  # 武将
         self.is_alive = True
         self.is_ai = is_ai  # 是否是AI玩家
-        self.role = role  # 身份：lord(主公), loyalist(忠丸), rebel(反贼), traitor(内奸)
+        self.role = role  # 身份：lord(主公), loyalist(忠臣), rebel(反贼), traitor(内奸)
         # 回合状态
         self.slash_used_this_turn = False
 
+    def __repr__(self):
+        return f"<Player {self.name} hp={self.hp}/{self.max_hp} hand={len(self.hand)}>"
     def draw(self, deck, n: int = 1):
         for _ in range(n):
             card = deck.draw()
@@ -47,9 +49,9 @@ class Player:
         
         return True
 
+    def get_attack_range(self):
+        """基础攻击范围：默认1；后续可由装备修改"""
+        return 1
     def reset_turn(self):
         """重置回合状态"""
         self.slash_used_this_turn = False
-
-    def __repr__(self):
-        return f"<Player {self.name} hp={self.hp}/{self.max_hp} hand={len(self.hand)}>"

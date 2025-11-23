@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from ui.table.scene import GameView
 from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog, PlayerCountDialog
+from ui.response_dialog import ResponseDialog
 from engine.game import Game, setup_demo_game, get_role_config
 from engine.player import Player
 from engine.hero import get_random_heroes
@@ -182,8 +183,8 @@ class MainWindow(QMainWindow):
         self.game.event_bus.on("card_effect_done", self.on_card_effect_done)
         # 监听出闪事件
         self.game.event_bus.on("dodge_used", self.on_dodge_used_event)
-        # 监听弃牌阶段
-        self.game.event_bus.on("discard_phase", self.on_discard_phase)
+        # 监听响应请求（如被杀需要出闪）
+        self.game.event_bus.on("response_request", self.on_response_request)
         
         self.log("游戏开始！")
         self.log(f"你的身份：{self._get_role_name(selected_role)}")
@@ -241,6 +242,22 @@ class MainWindow(QMainWindow):
             # 如果AI回合自动结束，继续切换直到玩家回合
             self.auto_play_ai_turns()
     
+    def on_response_request(self, request, **kwargs):
+        """响应请求事件：弹出响应对话框"""
+        # 仅在人类玩家需要响应时弹框
+        if request.target_player.is_ai:
+            return
+        dialog = ResponseDialog(request, self)
+        if dialog.exec():
+            selected_index = dialog.get_selected_index()
+        else:
+            selected_index = None
+        # 将选择结果交给响应系统处理
+        self.game.response_system.handle_response(selected_index)
+        # 处理后刷新界面
+        self.view.refresh()
+        self.update_info()
+    
     def log(self, message):
         """添加日志"""
         self.log_text.append(message)
@@ -248,7 +265,7 @@ class MainWindow(QMainWindow):
         cursor = self.log_text.textCursor()
         cursor.movePosition(QTextCursor.End)
         self.log_text.setTextCursor(cursor)
-    
+
     def update_info(self):
         """更新游戏信息"""
         info = f"当前玩家：{self.game.current_player.name}\n"
@@ -259,6 +276,7 @@ class MainWindow(QMainWindow):
             info += f"\n提示：点击手牌和目标后\n点击'出牌'按钮"
         self.info_text.setText(info)
 
+        
     def on_use_card(self):
         """出牌：使用选中的手牌对选中的目标"""
         if self.game.phase == "game_over":
@@ -404,6 +422,8 @@ class MainWindow(QMainWindow):
         self.game.event_bus.on("card_effect_done", self.on_card_effect_done)
         self.game.event_bus.on("dodge_used", self.on_dodge_used_event)
         self.game.event_bus.on("discard_phase", self.on_discard_phase)
+        # 监听响应请求（如被杀需要出闪）
+        self.game.event_bus.on("response_request", self.on_response_request)
         
         self.log("游戏重新开始！")
         self.log(f"你的身份：{self._get_role_name(selected_role)}")

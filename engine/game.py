@@ -3,6 +3,7 @@ from engine.player import Player
 from engine.events import EventBus
 from engine.hero import get_random_heroes
 from engine.ai import AIController
+from engine.response import ResponseSystem
 
 
 def get_role_config(player_count):
@@ -27,7 +28,7 @@ class Game:
         self.turn_index = 0
         self.current_player = self.players[self.turn_index]
         self.event_bus = EventBus()
-        self.phase = "idle"  # idle, draw, play, discard
+        self.phase = "idle"  # idle, prepare, judge, draw, play, discard
         self.log_callback = None  # UI日志回调
         
         # AI控制器
@@ -36,15 +37,15 @@ class Game:
             if player.is_ai:
                 self.ai_controllers[player] = AIController(player, self)
         
+        # 响应系统
+        self.response_system = ResponseSystem(self)
+        
         # 发初始手牌
         for p in self.players:
             p.draw(self.deck, 4)
         
-        # 第一个回合开始时摸牌
-        self.log(f"\n===== {self.current_player.name} 的回合 =====")
-        self.current_player.draw(self.deck, 2)
-        self.log(f"{self.current_player.name} 摸了2张牌")
-        self.phase = "play"
+        # 第一个回合开始
+        self.start_turn()
     
     def set_log_callback(self, callback):
         """设置UI日志回调函数"""
@@ -60,8 +61,37 @@ class Game:
         """发送事件"""
         self.event_bus.emit(event_name, game=self, **kwargs)
 
-    def current_player_draw(self, n=2):
-        self.current_player.draw(self.deck, n)
+    def start_turn(self):
+        """开始一个新回合（准备-判定-摘牌-出牌-弃牌）"""
+        self.log(f"\n===== {self.current_player.name} 的回合 =====")
+        
+        # 1. 准备阶段
+        self.phase = "prepare"
+        self.log(f"[准备阶段]")
+        self.emit_event("prepare_phase", player=self.current_player)
+        # TODO: 触发观星等准备阶段技能
+        
+        # 2. 判定阶段
+        self.phase = "judge"
+        self.log(f"[判定阶段]")
+        self.emit_event("judge_phase", player=self.current_player)
+        # TODO: 处理延时锦囊（乐不思蜀、闪电等）
+        
+        # 3. 摘牌阶段
+        self.phase = "draw"
+        self.log(f"[摘牌阶段]")
+        self.current_player.draw(self.deck, 2)
+        self.log(f"{self.current_player.name} 摘了2张牌")
+        self.emit_event("draw_phase", player=self.current_player)
+        
+        # 4. 出牌阶段
+        self.phase = "play"
+        self.log(f"[出牌阶段]")
+        self.emit_event("play_phase", player=self.current_player)
+        
+        # 如果是AI玩家，自动执行
+        if self.current_player.is_ai:
+            self.ai_play_turn()
 
     def use_card(self, card_index, target_indices=None):
         """当前玩家使用手牌"""
@@ -135,15 +165,8 @@ class Game:
         
         self.phase = "idle"
         
-        # 摘牌阶段
-        self.log(f"\n===== {self.current_player.name} 的回合 =====")
-        self.current_player.draw(self.deck, 2)
-        self.log(f"{self.current_player.name} 摸了2张牌")
-        self.phase = "play"
-        
-        # 如果是AI玩家，自动执行
-        if self.current_player.is_ai:
-            self.ai_play_turn()
+        # 开始新回合
+        self.start_turn()
     
     def discard_cards(self, card_indices):
         """弃置指定的牌（由UI调用）"""
@@ -163,14 +186,21 @@ class Game:
         # 继续完成回合
         self.finish_turn()
     
+    def distance(self, a: Player, b: Player):
+        """基础距离计算：按照座位顺序的环形最短距离（暂不考虑坐骑修正）"""
+        try:
+            n = len(self.players)
+            ia = next(i for i, p in enumerate(self.players) if p is a)
+            ib = next(i for i, p in enumerate(self.players) if p is b)
+            d = abs(ia - ib)
+            return min(d, n - d)
+        except StopIteration:
+            return 999
     def ai_play_turn(self):
         """执行AI回合"""
         ai = self.ai_controllers.get(self.current_player)
         if ai:
             ai.play_turn()
-
-    def get_alive_players(self):
-        return [p for p in self.players if p.is_alive]
     
     def check_game_over(self):
         """检查游戏是否结束，返回获胜方"""

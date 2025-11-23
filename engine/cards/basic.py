@@ -46,24 +46,42 @@ class Slash(Card):
         # 目标需要出闪抵消
         game.emit_event("slash_used", source=player, target=target, card=self)
         
-        # 检查目标是否有闪（简化：自动出闪）
-        from engine.cards.basic import Dodge
-        dodge_index = None
-        for i, card in enumerate(target.hand):
-            if isinstance(card, Dodge):
-                dodge_index = i
-                break
+        # 使用响应系统请求闪的响应
+        game.log(f"{player.name} 对 {target.name} 使用了【杀】")
+        responded = game.response_system.request_response(
+            request_type="dodge_slash",
+            source_player=player,
+            target_player=target,
+            context={"damage_card": self}
+        )
         
-        if dodge_index is not None:
-            # 自动使用闪
-            dodge_card = target.hand.pop(dodge_index)
-            game.deck.discard(dodge_card)
+        # 处理响应结果
+        if responded is None:
+            # 人类玩家：等待UI响应，不在此结算
+            player.slash_used_this_turn = True
+            return
+        elif responded:  # 有闪，抵消攻击
             game.log(f"{target.name} 使用了【闪】抵消了攻击")
-            game.emit_event("dodge_used", source=target, card=dodge_card, against=player)
-        else:
-            # 没有闪，造成伤害
+        else:  # 没有闪，造成伤害
+            # 距离限制：若超出攻击范围，不造成伤害（保险）
+            try:
+                attack_range = player.get_attack_range() if hasattr(player, 'get_attack_range') else 1
+                dist = game.distance(player, target) if hasattr(game, 'distance') else 1
+                if dist > attack_range:
+                    game.log(f"目标超出攻击范围（距离 {dist}，范围 {attack_range}），攻击未生效")
+                    player.slash_used_this_turn = True
+                    return
+            except Exception:
+                pass
+            
             target.hp -= 1
-            game.log(f"{player.name} 对 {target.name} 使用了【杀】，造成1点伤害")
+            game.log(f"{target.name} 受到了1点伤害，剩余体力: {target.hp}")
+            
+            # 触发受伤技能（如奸雄）
+            if target.hero and target.hero.skills:
+                for skill in target.hero.skills:
+                    if skill.can_trigger(target, game, "damage_taken", damage_card=self, source=player):
+                        skill.trigger(target, game, damage_card=self, source=player)
             
             # 立即检查是否死亡
             game.check_death(target)
