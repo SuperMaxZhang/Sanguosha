@@ -33,22 +33,26 @@ class CardItem(QGraphicsRectItem):
         if hasattr(self.card, 'description') and self.card.description:
             text += f"\n{self.card.description}"
         
-        self.text.setPlainText(text)
-        
         # 根据卡牌大小调整字体
         if hasattr(self.card, 'description') and self.card.description:
-            # 装备牌有说明，字体稍小
-            font = QFont("Arial", 9)
+            # 装备牌有说明，字体更小，并设置自动换行
+            font = QFont("Arial", 8)
         else:
             font = QFont("Arial", 12, QFont.Bold)
+        
         self.text.setFont(font)
+        self.text.setPlainText(text)
+        
+        # 设置文本宽度以自动换行
+        self.text.setTextWidth(self.width - 10)  # 留10px边距
         
         # 居中
         bounds = self.text.boundingRect()
         self.text.setPos(
-            (self.width - bounds.width()) / 2,
+            5,  # 左边距5px
             (self.height - bounds.height()) / 2
         )
+        
         # 颜色：红色花色用红字
         if self.card.suit in ["♥", "♦"]:
             self.text.setDefaultTextColor(QColor(200, 0, 0))
