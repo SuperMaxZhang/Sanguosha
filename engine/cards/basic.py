@@ -38,29 +38,29 @@ class Slash(Card):
                     game.log(f"{player.name} 发动【{skill.name}】，可以无限使用【杀】")
                     break
         
-        if has_paoxiao or has_zhuge:
-            return True  # 哆哮或诸葛连弩：无次数限制
+        # 检查次数限制
+        if not (has_paoxiao or has_zhuge):
+            # 正常情况：出牌阶段限一次
+            if hasattr(player, 'slash_used_this_turn') and player.slash_used_this_turn:
+                return False
         
-        # 正常情况：出牌阶段限一次
-        if hasattr(player, 'slash_used_this_turn'):
-            return not player.slash_used_this_turn
         return True
 
     def use(self, player, targets, game):
         if not targets:
+            # 没有目标，把牌放回手牌
+            player.hand.append(self)
             return
         target = targets[0]
         
-        # 检查距离：在使用杀之前先检查是否在政击范围内
+        # 检查距离：在使用杀之前先检查是否在攻击范围内
         attack_range = player.get_attack_range() if hasattr(player, 'get_attack_range') else 1
         dist = game.distance(player, target) if hasattr(game, 'distance') else 1
         
         if dist > attack_range:
             game.log(f"{player.name} 对 {target.name} 使用【杀】失败：目标超出攻击范围（距离 {dist}，范围 {attack_range}）")
-            # 仍然标记为已使用（除非有诸葛连弩）
-            has_zhuge = any(hasattr(eq, 'name') and eq.name == "诸葛连弩" for eq in player.equip)
-            if not has_zhuge:
-                player.slash_used_this_turn = True
+            # 把牌放回手牌，不标记为已使用
+            player.hand.append(self)
             return
         
         # 目标需要出闪抵消

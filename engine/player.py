@@ -41,6 +41,11 @@ class Player:
         # 执行效果
         card.use(self, targets, game)
         
+        # 检查牌是否被放回手牌（使用失败的情况）
+        if card in self.hand:
+            # 牌已经被放回手牌，不需要弃置
+            return False
+        
         # 进入弃牌堆（装备牌不进入，已在use中加入装备区）
         if card.card_type != "equip":
             game.deck.discard(card)
