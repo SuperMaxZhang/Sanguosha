@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from ui.table.scene import GameView
-from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog, PlayerCountDialog
+from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog, PlayerCountDialog, HeroInfoDialog
 from ui.response_dialog import ResponseDialog
 from engine.game import Game, setup_demo_game, get_role_config
 from engine.player import Player
@@ -455,8 +455,15 @@ class MainWindow(QMainWindow):
             self.on_end()
         elif event.key() == Qt.Key_R:
             self.on_restart()
+        elif event.key() == Qt.Key_H:
+            self.show_hero_info()
         else:
             super().keyPressEvent(event)
+    
+    def show_hero_info(self):
+        """显示武将信息对话框"""
+        dialog = HeroInfoDialog(self)
+        dialog.exec()
 
 
 def run_app():

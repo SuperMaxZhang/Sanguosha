@@ -359,3 +359,150 @@ class DiscardDialog(QDialog):
     
     def get_selected_indices(self):
         return self.selected_cards
+
+
+class HeroInfoDialog(QDialog):
+    """武将信息对话框 - 显示所有武将的历史背景和技能"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("武将信息查询 (按H键打开)")
+        self.setMinimumSize(700, 600)
+        
+        layout = QVBoxLayout(self)
+        
+        # 标题
+        title = QLabel("📜 武将列传")
+        title.setStyleSheet("""
+            font-size: 24px;
+            font-weight: bold;
+            color: #D32F2F;
+            margin: 15px;
+            qproperty-alignment: AlignCenter;
+        """)
+        layout.addWidget(title)
+        
+        # 武将列表
+        self.hero_list = QListWidget()
+        self.hero_list.setStyleSheet("""
+            QListWidget {
+                font-size: 14px;
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+            QListWidget::item {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+            }
+            QListWidget::item:selected {
+                background-color: #E3F2FD;
+                color: #1976D2;
+            }
+        """)
+        
+        # 添加所有武将
+        for hero_class in STANDARD_HEROES:
+            hero = hero_class()
+            item_text = f"{hero.name}  【{self._get_force_name(hero.force)}】  {hero.hp}血"
+            if hero.skills:
+                skill_names = "、".join([s.name for s in hero.skills])
+                item_text += f"  —  {skill_names}"
+            
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, hero)
+            self.hero_list.addItem(item)
+        
+        self.hero_list.itemClicked.connect(self.on_hero_selected)
+        layout.addWidget(self.hero_list)
+        
+        # 详细信息区域
+        self.detail_label = QLabel("👆 请选择一位武将查看详细信息")
+        self.detail_label.setStyleSheet("""
+            QLabel {
+                font-size: 13px;
+                padding: 20px;
+                background-color: #FFF9C4;
+                border: 2px solid #FBC02D;
+                border-radius: 8px;
+                margin: 10px 0;
+            }
+        """)
+        self.detail_label.setWordWrap(True)
+        self.detail_label.setMinimumHeight(250)
+        layout.addWidget(self.detail_label)
+        
+        # 关闭按钮
+        close_btn = QPushButton("关闭 (ESC)")
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+        """)
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+    
+    def _get_force_name(self, force):
+        """获取势力名称"""
+        force_names = {
+            "wei": "魏",
+            "shu": "蜀",
+            "wu": "吴",
+            "qun": "群"
+        }
+        return force_names.get(force, "未知")
+    
+    def on_hero_selected(self, item):
+        """显示武将详细信息"""
+        hero = item.data(Qt.UserRole)
+        
+        # 武将历史背景
+        hero_stories = {
+            " 曹操": "字孟德，东汉末年杰出的政治家、军事家、文学家、书法家。挟天子以令诸侯，统一北方，奠定曹魏基业。精通兵法，善于用人，一生征战四方。",
+            "刘备": "字玄德，汉室宗亲，三顾茅庐请得诸葛亮，建立蜀汉政权。仁德为怀，爱民如子，以仁义著称于世。",
+            "孙权": "字仲谋，继承父兄基业，据守江东。用人有方，善于纳谏，建立东吴政权，与魏蜀三分天下。",
+            "关羽": "字云长，刘备义弟，勇冠三军。温酒斩华雄，过五关斩六将，水淹七军，威震华夏。忠义无双，武艺高强。",
+            " 张飞": "字翼德，刘备义弟，猛将也。长坂坡一声怒喝，吓退曹军百万。性格豪爽，勇猛过人。",
+            " 赵云": "字子龙，常山赵子龙，浑身是胆。长坂坡七进七出救阿斗，一生追随刘备，忠勇双全。",
+            " 诸葛亮": "字孔明，号卧龙先生。智谋天下无双，料事如神。草船借箭，借东风，空城计，七擒孟获，鞠躬尽瘁死而后已。",
+            " 华佗": "东汉末年著名医学家，医术高明，被誉为'神医'。精通外科手术，发明麻沸散，悬壶济世。",
+            " 吕布": "字奉先，三国第一猛将。'人中吕布，马中赤兔'，虎牢关前战三英，辕门射戟定纷争。武艺盖世，勇冠三军。"
+        }
+        
+        # 构建详细信息
+        info = f"━━━━━━━━━━━━━━━━━━━━━\n"
+        info += f"🎭 武将：{hero.name}\n"
+        info += f"🏰 势力：{self._get_force_name(hero.force)}\n"
+        info += f"❤️  体力：{hero.hp}\n"
+        info += f"━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # 技能信息
+        if hero.skills:
+            info += "⚔️  武将技能：\n\n"
+            for skill in hero.skills:
+                info += f"【{skill.name}】\n"
+                info += f"  {skill.description}\n\n"
+        else:
+            info += "⚔️  武将技能：无\n\n"
+        
+        info += f"━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # 历史背景
+        story = hero_stories.get(hero.name, "暂无历史背景资料。")
+        info += f"📖 人物传记：\n\n{story}"
+        
+        self.detail_label.setText(info)
+    
+    def keyPressEvent(self, event):
+        """支持ESC键关闭"""
+        if event.key() == Qt.Key_Escape:
+            self.accept()
+        else:
+            super().keyPressEvent(event)
