@@ -75,16 +75,24 @@ class AIController:
         return None
     
     def select_attack_target(self):
-        """选择攻击目标：优先血量低的"""
-        other_players = [(i, p) for i, p in enumerate(self.game.players) 
-                        if p != self.player and p.is_alive]
+        """选择攻击目标：优先血量低的，并检查距离"""
+        # 获取攻击范围
+        attack_range = self.player.get_attack_range() if hasattr(self.player, 'get_attack_range') else 1
         
-        if not other_players:
+        # 筛选范围内的目标
+        valid_targets = []
+        for i, p in enumerate(self.game.players):
+            if p != self.player and p.is_alive:
+                dist = self.game.distance(self.player, p) if hasattr(self.game, 'distance') else 1
+                if dist <= attack_range:
+                    valid_targets.append((i, p, dist))
+        
+        if not valid_targets:
             return None
         
-        # 优先攻击血量最低的
-        other_players.sort(key=lambda x: x[1].hp)
-        return other_players[0][0]
+        # 优先攻击血量最低的，其次是距离最近的
+        valid_targets.sort(key=lambda x: (x[1].hp, x[2]))
+        return valid_targets[0][0]
     
     def select_control_target(self):
         """选择控制目标：优先手牌多的"""

@@ -50,6 +50,19 @@ class Slash(Card):
         if not targets:
             return
         target = targets[0]
+        
+        # 检查距离：在使用杀之前先检查是否在政击范围内
+        attack_range = player.get_attack_range() if hasattr(player, 'get_attack_range') else 1
+        dist = game.distance(player, target) if hasattr(game, 'distance') else 1
+        
+        if dist > attack_range:
+            game.log(f"{player.name} 对 {target.name} 使用【杀】失败：目标超出攻击范围（距离 {dist}，范围 {attack_range}）")
+            # 仍然标记为已使用（除非有诸葛连弩）
+            has_zhuge = any(hasattr(eq, 'name') and eq.name == "诸葛连弩" for eq in player.equip)
+            if not has_zhuge:
+                player.slash_used_this_turn = True
+            return
+        
         # 目标需要出闪抵消
         game.emit_event("slash_used", source=player, target=target, card=self)
         
@@ -57,7 +70,7 @@ class Slash(Card):
         has_zhuge = any(hasattr(eq, 'name') and eq.name == "诸葛连弩" for eq in player.equip)
         
         # 使用响应系统请求闪的响应
-        game.log(f"{player.name} 对 {target.name} 使用了【杀】{' (诸葛连弩)' if has_zhuge else ''}")
+        game.log(f"{player.name} 对 {target.name} 使用了【杀】{' (诸葛连弩)' if has_zhuge else ''}（距离 {dist}，范围 {attack_range}）")
         responded = game.response_system.request_response(
             request_type="dodge_slash",
             source_player=player,
@@ -74,18 +87,6 @@ class Slash(Card):
         elif responded:  # 有闪，抵消攻击
             game.log(f"{target.name} 使用了【闪】抵消了攻击")
         else:  # 没有闪，造成伤害
-            # 距离限制：若超出攻击范围，不造成伤害（保险）
-            try:
-                attack_range = player.get_attack_range() if hasattr(player, 'get_attack_range') else 1
-                dist = game.distance(player, target) if hasattr(game, 'distance') else 1
-                if dist > attack_range:
-                    game.log(f"目标超出攻击范围（距离 {dist}，范围 {attack_range}），攻击未生效")
-                    if not has_zhuge:
-                        player.slash_used_this_turn = True
-                    return
-            except Exception:
-                pass
-            
             target.hp -= 1
             game.log(f"{target.name} 受到了1点伤害，剩余体力: {target.hp}")
             

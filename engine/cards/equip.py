@@ -4,10 +4,11 @@ from engine.cards.basic import Card
 
 class EquipCard(Card):
     """装备牌基类"""
-    def __init__(self, name: str, suit: str = "♠", rank: str = "A", equip_type: str = "weapon"):
+    def __init__(self, name: str, suit: str = "♠", rank: str = "A", equip_type: str = "weapon", description: str = ""):
         super().__init__(name, suit, rank)
         self.card_type = "equip"
         self.equip_type = equip_type  # weapon, armor, plus_horse, minus_horse
+        self.description = description  # 装备能力说明
     
     def can_use(self, player, game):
         """装备牌总是可以使用"""
@@ -39,21 +40,21 @@ class EquipCard(Card):
 class ZhuGeLianNu(EquipCard):
     """诸葛连弩 - 攻击范围1，可无限次使用【杀】"""
     def __init__(self, suit="♠", rank="A"):
-        super().__init__("诸葛连弩", suit, rank, "weapon")
+        super().__init__("诸葛连弩", suit, rank, "weapon", "攻击范围1，无限出杀")
         self.attack_range = 1
 
 
 class QingGangJian(EquipCard):
-    """青釭剑 - 攻击范围2，无视防具"""
+    """青傕剑 - 攻击范围2，无视防具"""
     def __init__(self, suit="♠", rank="A"):
-        super().__init__("青釭剑", suit, rank, "weapon")
+        super().__init__("青傕剑", suit, rank, "weapon", "攻击范围2，无视防具")
         self.attack_range = 2
 
 
 class ZhangBaSheMao(EquipCard):
     """丈八蛇矛 - 攻击范围3"""
     def __init__(self, suit="♠", rank="A"):
-        super().__init__("丈八蛇矛", suit, rank, "weapon")
+        super().__init__("丈八蛇矛", suit, rank, "weapon", "攻击范围3")
         self.attack_range = 3
 
 
@@ -83,13 +84,13 @@ class QiLinGong(EquipCard):
 class BaGuaZhen(EquipCard):
     """八卦阵 - 可以进行判定代替【闪】"""
     def __init__(self, suit="♠", rank="A"):
-        super().__init__("八卦阵", suit, rank, "armor")
+        super().__init__("八卦阵", suit, rank, "armor", "被杀时可判定，红色视为闪")
 
 
 class RenWangDun(EquipCard):
     """仁王盾 - 黑色【杀】对你无效"""
     def __init__(self, suit="♠", rank="A"):
-        super().__init__("仁王盾", suit, rank, "armor")
+        super().__init__("仁王盾", suit, rank, "armor", "黑色杀无效")
 
 
 # ========== 坐骑牌 ==========
@@ -97,13 +98,13 @@ class RenWangDun(EquipCard):
 class PlusHorse(EquipCard):
     """+1马 - 其他角色计算与你的距离+1"""
     def __init__(self, name: str, suit: str = "♠", rank: str = "A"):
-        super().__init__(name, suit, rank, "plus_horse")
+        super().__init__(name, suit, rank, "plus_horse", "防御距离+1")
 
 
 class MinusHorse(EquipCard):
     """-1马 - 你计算与其他角色的距离-1"""
     def __init__(self, name: str, suit: str = "♠", rank: str = "A"):
-        super().__init__(name, suit, rank, "minus_horse")
+        super().__init__(name, suit, rank, "minus_horse", "攻击距离-1")
 
 
 # 具体坐骑

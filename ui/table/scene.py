@@ -102,14 +102,16 @@ class PlayerPanel(QGraphicsRectItem):
             
             for eq in self.player.equip:
                 if hasattr(eq, 'equip_type'):
+                    # 获取能力说明
+                    desc = eq.description if hasattr(eq, 'description') else ""
                     if eq.equip_type == "weapon":
-                        weapon = eq.name
+                        weapon = f"{eq.name}({desc})" if desc else eq.name
                     elif eq.equip_type == "armor":
-                        armor = eq.name
+                        armor = f"{eq.name}({desc})" if desc else eq.name
                     elif eq.equip_type == "plus_horse":
-                        plus_horse = eq.name
+                        plus_horse = f"{eq.name}({desc})" if desc else eq.name
                     elif eq.equip_type == "minus_horse":
-                        minus_horse = eq.name
+                        minus_horse = f"{eq.name}({desc})" if desc else eq.name
             
             if weapon:
                 equip_parts.append(f"武器:{weapon}")
