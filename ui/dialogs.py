@@ -1,9 +1,136 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QButtonGroup, QRadioButton, QGroupBox, QListWidget, QListWidgetItem
+    QPushButton, QButtonGroup, QRadioButton, QGroupBox, QListWidget, QListWidgetItem, QSlider
 )
 from PySide6.QtCore import Qt
 from engine.hero import STANDARD_HEROES
+
+
+class PlayerCountDialog(QDialog):
+    """人数选择对话框"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("选择游戏人数")
+        self.setMinimumWidth(500)
+        self.player_count = 4
+        
+        layout = QVBoxLayout(self)
+        
+        # 标题
+        title = QLabel("请选择游戏人数：")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 10px;")
+        layout.addWidget(title)
+        
+        # 人数滑块
+        slider_layout = QHBoxLayout()
+        slider_layout.addWidget(QLabel("2人"))
+        
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimum(2)
+        self.slider.setMaximum(8)
+        self.slider.setValue(4)
+        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setTickInterval(1)
+        self.slider.valueChanged.connect(self.on_slider_changed)
+        slider_layout.addWidget(self.slider)
+        
+        slider_layout.addWidget(QLabel("8人"))
+        layout.addLayout(slider_layout)
+        
+        # 当前选择显示
+        self.current_label = QLabel("4 人")
+        self.current_label.setStyleSheet("""
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #2196F3;
+            margin: 20px;
+            qproperty-alignment: AlignCenter;
+        """)
+        layout.addWidget(self.current_label)
+        
+        # 身份配置说明
+        self.config_label = QLabel()
+        self.config_label.setStyleSheet("""
+            font-size: 14px;
+            color: #666;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            margin: 10px 0;
+        """)
+        layout.addWidget(self.config_label)
+        
+        # 初始化显示
+        self.update_config_display(4)
+        
+        # 快捷按钮
+        quick_layout = QHBoxLayout()
+        quick_label = QLabel("快速选择：")
+        quick_layout.addWidget(quick_label)
+        
+        for count in [2, 4, 5, 8]:
+            btn = QPushButton(f"{count}人")
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #e3f2fd;
+                    border: 2px solid #2196F3;
+                    border-radius: 5px;
+                    padding: 8px 15px;
+                    font-size: 13px;
+                }
+                QPushButton:hover {
+                    background-color: #2196F3;
+                    color: white;
+                }
+            """)
+            btn.clicked.connect(lambda checked, c=count: self.set_count(c))
+            quick_layout.addWidget(btn)
+        
+        quick_layout.addStretch()
+        layout.addLayout(quick_layout)
+        
+        # 确认按钮
+        confirm_btn = QPushButton("确认")
+        confirm_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-top: 10px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        confirm_btn.clicked.connect(self.accept)
+        layout.addWidget(confirm_btn)
+    
+    def on_slider_changed(self, value):
+        self.player_count = value
+        self.current_label.setText(f"{value} 人")
+        self.update_config_display(value)
+    
+    def set_count(self, count):
+        self.slider.setValue(count)
+    
+    def update_config_display(self, count):
+        configs = {
+            2: "🀄 1主公 + 1反贼  (经典对决)",
+            3: "🀄 1主公 + 1忠臣 + 1反贼",
+            4: "🀄 1主公 + 1忠臣 + 2反贼  (标准局)",
+            5: "🀄 1主公 + 1忠臣 + 2反贼 + 1内奸",
+            6: "🀄 1主公 + 1忠臣 + 3反贼 + 1内奸",
+            7: "🀄 1主公 + 2忠臣 + 3反贼 + 1内奸",
+            8: "🀄 1主公 + 2忠臣 + 4反贼 + 1内奸  (满人局)"
+        }
+        self.config_label.setText(configs.get(count, ""))
+    
+    def get_player_count(self):
+        return self.player_count
 
 
 class HeroSelectDialog(QDialog):
@@ -48,11 +175,12 @@ class HeroSelectDialog(QDialog):
 
 class RoleSelectDialog(QDialog):
     """身份选择对话框"""
-    def __init__(self, parent=None):
+    def __init__(self, player_count=4, parent=None):
         super().__init__(parent)
         self.setWindowTitle("选择你的身份")
         self.setMinimumWidth(400)
-        self.selected_role = "player"
+        self.selected_role = "lord"
+        self.player_count = player_count
         
         layout = QVBoxLayout(self)
         
@@ -74,19 +202,41 @@ class RoleSelectDialog(QDialog):
         # 身份按钮
         self.role_group = QButtonGroup(self)
         
-        roles = [
+        # 根据人数决定可选身份
+        all_roles = [
             ("主公", "lord", "红色，公开身份，体力+1"),
             ("忠臣", "loyalist", "黄色，保护主公"),
             ("反贼", "rebel", "绿色，击杀主公"),
             ("内奸", "traitor", "蓝色，最后存活"),
         ]
         
-        for i, (name, role, desc) in enumerate(roles):
-            btn = QRadioButton(f"{name} - {desc}")
+        # 根据人数禁用某些身份
+        if player_count == 2:
+            # 2人局：只能选主公或反贼
+            available_roles = ["lord", "rebel"]
+        elif player_count == 3:
+            # 3人局：只能选主公、忠臣或反贼
+            available_roles = ["lord", "loyalist", "rebel"]
+        elif player_count == 4:
+            # 4人局：没有内奸
+            available_roles = ["lord", "loyalist", "rebel"]
+        else:
+            # 5人及以上：所有身份都可选
+            available_roles = ["lord", "loyalist", "rebel", "traitor"]
+        
+        for i, (name, role, desc_text) in enumerate(all_roles):
+            btn = QRadioButton(f"{name} - {desc_text}")
+            
+            # 如果该身份不可用，禁用按钮
+            if role not in available_roles:
+                btn.setEnabled(False)
+                btn.setStyleSheet("color: #ccc;")
+            
             self.role_group.addButton(btn, i)
             layout.addWidget(btn)
             
-            if role == "lord":
+            # 默认选中第一个可用的身份
+            if role == available_roles[0]:
                 btn.setChecked(True)
         
         # 确认按钮
@@ -98,7 +248,16 @@ class RoleSelectDialog(QDialog):
         """获取选中的身份"""
         roles = ["lord", "loyalist", "rebel", "traitor"]
         index = self.role_group.checkedId()
-        return roles[index] if 0 <= index < len(roles) else "lord"
+        selected = roles[index] if 0 <= index < len(roles) else "lord"
+        
+        # 再次检查该身份是否在当前人数配置中
+        from engine.game import get_role_config
+        all_roles = get_role_config(self.player_count)
+        if selected in all_roles:
+            return selected
+        else:
+            # 如果不在，返回第一个可用身份
+            return all_roles[0]
 
 
 class DiscardDialog(QDialog):

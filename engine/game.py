@@ -5,6 +5,20 @@ from engine.hero import get_random_heroes
 from engine.ai import AIController
 
 
+def get_role_config(player_count):
+    """获取不同人数的身份配置"""
+    configs = {
+        2: ["lord", "rebel"],  # 1主 + 1反
+        3: ["lord", "loyalist", "rebel"],  # 1主 + 1忠 + 1反
+        4: ["lord", "loyalist", "rebel", "rebel"],  # 1主 + 1忠 + 2反
+        5: ["lord", "loyalist", "rebel", "rebel", "traitor"],  # 1主 + 1忠 + 2反 + 1内
+        6: ["lord", "loyalist", "rebel", "rebel", "rebel", "traitor"],  # 1主 + 1忠 + 3反 + 1内
+        7: ["lord", "loyalist", "loyalist", "rebel", "rebel", "rebel", "traitor"],  # 1主 + 2忠 + 3反 + 1内
+        8: ["lord", "loyalist", "loyalist", "rebel", "rebel", "rebel", "rebel", "traitor"],  # 1主 + 2忠 + 4反 + 1内
+    }
+    return configs.get(player_count, configs[4])
+
+
 class Game:
     def __init__(self, players):
         self.players = players

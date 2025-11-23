@@ -5,8 +5,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from ui.table.scene import GameView
-from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog
-from engine.game import Game, setup_demo_game
+from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog, PlayerCountDialog
+from engine.game import Game, setup_demo_game, get_role_config
 from engine.player import Player
 from engine.hero import get_random_heroes
 
@@ -349,33 +349,50 @@ class MainWindow(QMainWindow):
     
     def on_restart(self):
         """重新开始游戏"""
-        # 显示身份选择对话框
-        role_dialog = RoleSelectDialog(self)
+        # 1. 选择人数
+        count_dialog = PlayerCountDialog(self)
+        if count_dialog.exec():
+            player_count = count_dialog.get_player_count()
+        else:
+            player_count = 4
+        
+        # 2. 选择身份（传入人数）
+        role_dialog = RoleSelectDialog(player_count, self)
         if role_dialog.exec():
             selected_role = role_dialog.get_selected_role()
         else:
             selected_role = "lord"
         
-        # 显示武将选择对话框
+        # 3. 选择武将
         hero_dialog = HeroSelectDialog(self)
         if hero_dialog.exec():
             player_hero = hero_dialog.get_selected_hero()
         else:
             player_hero = get_random_heroes(1)[0]
         
-        # 主公体力+1
+        # 获取身份配置
+        all_roles = get_role_config(player_count)
+        
+        # 从所有身份中移除玩家选择的身份，剩下的分配给AI
+        ai_roles = all_roles.copy()
+        ai_roles.remove(selected_role)
+        
+        # 如果玩家是主公，体力+1
         player_hp = player_hero.hp + 1 if selected_role == "lord" else player_hero.hp
         
         # 创建新游戏
-        ai_heroes = get_random_heroes(3)
-        ai_roles = ["loyalist", "rebel", "rebel"]  # 1忠臣2反
+        ai_count = player_count - 1
+        ai_heroes = get_random_heroes(ai_count)
         
-        players = [
-            Player(player_hero.name, player_hp, player_hero, is_ai=False, role=selected_role),
-            Player(ai_heroes[0].name, ai_heroes[0].hp, ai_heroes[0], is_ai=True, role=ai_roles[0]),
-            Player(ai_heroes[1].name, ai_heroes[1].hp, ai_heroes[1], is_ai=True, role=ai_roles[1]),
-            Player(ai_heroes[2].name, ai_heroes[2].hp, ai_heroes[2], is_ai=True, role=ai_roles[2]),
-        ]
+        players = [Player(player_hero.name, player_hp, player_hero, is_ai=False, role=selected_role)]
+        
+        # 添加AI玩家
+        for i in range(ai_count):
+            ai_hp = ai_heroes[i].hp
+            # 如果这个AI是主公，体力+1
+            if ai_roles[i] == "lord":
+                ai_hp += 1
+            players.append(Player(ai_heroes[i].name, ai_hp, ai_heroes[i], is_ai=True, role=ai_roles[i]))
         
         self.game = Game(players)
         self.view.game = self.game
@@ -425,32 +442,50 @@ class MainWindow(QMainWindow):
 def run_app():
     app = QApplication([])
     
-    # 显示选择对话框
-    role_dialog = RoleSelectDialog()
+    # 1. 选择人数
+    count_dialog = PlayerCountDialog()
+    if count_dialog.exec():
+        player_count = count_dialog.get_player_count()
+    else:
+        player_count = 4
+    
+    # 2. 选择身份（传入人数）
+    role_dialog = RoleSelectDialog(player_count)
     if role_dialog.exec():
         selected_role = role_dialog.get_selected_role()
     else:
         selected_role = "lord"
     
+    # 3. 选择武将
     hero_dialog = HeroSelectDialog()
     if hero_dialog.exec():
         player_hero = hero_dialog.get_selected_hero()
     else:
         player_hero = get_random_heroes(1)[0]
     
-    # 主公体力+1
+    # 获取身份配置
+    all_roles = get_role_config(player_count)
+    
+    # 从所有身份中移除玩家选择的身份，剩下的分配给AI
+    ai_roles = all_roles.copy()
+    ai_roles.remove(selected_role)
+    
+    # 如果玩家是主公，体力+1
     player_hp = player_hero.hp + 1 if selected_role == "lord" else player_hero.hp
     
     # 创建游戏
-    ai_heroes = get_random_heroes(3)
-    ai_roles = ["loyalist", "rebel", "rebel"]
+    ai_count = player_count - 1
+    ai_heroes = get_random_heroes(ai_count)
     
-    players = [
-        Player(player_hero.name, player_hp, player_hero, is_ai=False, role=selected_role),
-        Player(ai_heroes[0].name, ai_heroes[0].hp, ai_heroes[0], is_ai=True, role=ai_roles[0]),
-        Player(ai_heroes[1].name, ai_heroes[1].hp, ai_heroes[1], is_ai=True, role=ai_roles[1]),
-        Player(ai_heroes[2].name, ai_heroes[2].hp, ai_heroes[2], is_ai=True, role=ai_roles[2]),
-    ]
+    players = [Player(player_hero.name, player_hp, player_hero, is_ai=False, role=selected_role)]
+    
+    # 添加AI玩家
+    for i in range(ai_count):
+        ai_hp = ai_heroes[i].hp
+        # 如果这个AI是主公，体力+1
+        if ai_roles[i] == "lord":
+            ai_hp += 1
+        players.append(Player(ai_heroes[i].name, ai_hp, ai_heroes[i], is_ai=True, role=ai_roles[i]))
     
     game = Game(players)
     window = MainWindow(game, selected_role, player_hero)

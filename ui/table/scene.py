@@ -91,12 +91,32 @@ class PlayerPanel(QGraphicsRectItem):
             if skill_names:
                 skill_text = "\n" + " ".join(skill_names)
         
-        # 更新文本
+        # 更新文本 - 优化显示，避免文字过长
         name_suffix = " (电脑)" if self.player.is_ai else " (你)"
         hero_name = f" - {self.player.hero.name}" if self.player.hero else ""
         role_display = f" [{role_symbol}]" if role_symbol else ""
-        info = f"{self.player.name}{hero_name}{role_display}{name_suffix}\n手牌: {len(self.player.hand)}{skill_text}"
+        
+        # 缩短显示：只显示武将名或玩家名，不同时显示
+        if self.player.hero:
+            display_name = f"{self.player.hero.name}{role_display}{name_suffix}"
+        else:
+            display_name = f"{self.player.name}{role_display}{name_suffix}"
+        
+        info = f"{display_name}\n手牌: {len(self.player.hand)}{skill_text}"
         self.text.setPlainText(info)
+        
+        # 根据面板大小调整字体
+        if self.width <= 105:  # 8人局
+            font = QFont("Arial", 9)
+        elif self.width <= 110:  # 7人局
+            font = QFont("Arial", 9)
+        elif self.width <= 120:  # 6人局
+            font = QFont("Arial", 9)
+        elif self.width <= 130:  # 5人局
+            font = QFont("Arial", 10)
+        else:  # 2-4人局
+            font = QFont("Arial", 10)
+        self.text.setFont(font)
         
         # 如果死亡，变灰
         if not self.player.is_alive:
@@ -112,8 +132,23 @@ class PlayerPanel(QGraphicsRectItem):
         self.hp_items.clear()
         
         # 绘制血量（红色爱心）
-        heart_size = 18
-        start_y = 70  # 增加Y位置，给技能留空间
+        # 根据面板大小调整爱心大小和位置
+        if self.width <= 105:  # 8人局
+            heart_size = 14
+            start_y = self.height - 22
+        elif self.width <= 110:  # 7人局
+            heart_size = 15
+            start_y = self.height - 23
+        elif self.width <= 120:  # 6人局
+            heart_size = 15
+            start_y = self.height - 24
+        elif self.width <= 130:  # 5人局
+            heart_size = 16
+            start_y = self.height - 26
+        else:  # 2-4人局
+            heart_size = 17
+            start_y = 70
+        
         for i in range(self.player.max_hp):
             heart = QGraphicsTextItem(self)
             if i < self.player.hp:
@@ -123,7 +158,7 @@ class PlayerPanel(QGraphicsRectItem):
                 heart.setPlainText("♡")  # 空心
                 heart.setDefaultTextColor(QColor(150, 150, 150))
             
-            font = QFont("Arial", 16, QFont.Bold)
+            font = QFont("Arial", heart_size - 2, QFont.Bold)
             heart.setFont(font)
             heart.setPos(5 + i * heart_size, start_y)
             self.hp_items.append(heart)
@@ -323,18 +358,44 @@ class GameView(QGraphicsView):
         self.player_panels.clear()
         self.hand_cards.clear()
         
-        # 圆环布局展示所有玩家
-        radius = 200
-        cx, cy = 450, 250
-        import math
+        # 圆环布局展示所有玩家（根据人数自动调整半径和面板大小）
         n = len(self.game.players)
+        import math
+        
+        # 根据人数调整圆环大小和面板大小（更紧凑，字体更大）
+        if n <= 3:
+            radius = 130
+            panel_width = 150
+            panel_height = 118
+        elif n <= 4:
+            radius = 165
+            panel_width = 150
+            panel_height = 118
+        elif n == 5:
+            radius = 185
+            panel_width = 130
+            panel_height = 105
+        elif n == 6:
+            radius = 200
+            panel_width = 120
+            panel_height = 98
+        elif n == 7:
+            radius = 210
+            panel_width = 110
+            panel_height = 90
+        else:  # 8人
+            radius = 220
+            panel_width = 105
+            panel_height = 85
+        
+        cx, cy = 450, 280  # 圆心位置
         
         for i, p in enumerate(self.game.players):
             angle = 2 * math.pi * i / max(n, 1) - math.pi / 2  # 从顶部开始
-            x = cx + radius * math.cos(angle) - 75
-            y = cy + radius * math.sin(angle) - 40
+            x = cx + radius * math.cos(angle) - panel_width / 2
+            y = cy + radius * math.sin(angle) - panel_height / 2
             
-            panel = PlayerPanel(p, x, y)
+            panel = PlayerPanel(p, x, y, width=panel_width, height=panel_height)
             self.scene.addItem(panel)
             self.player_panels.append(panel)
             
@@ -350,15 +411,27 @@ class GameView(QGraphicsView):
                 break
         
         if player:
-            start_x = 50
+            # 根据手牌数量调整显示
+            card_count = len(player.hand)
+            card_width = 80
+            card_spacing = 90
+            
+            # 如果手牌超过10张，缩小间距
+            if card_count > 10:
+                card_spacing = 70
+                card_width = 65
+            
+            total_width = card_count * card_spacing
+            start_x = (900 - total_width) / 2  # 居中显示
             y = 550
+            
             for i, card in enumerate(player.hand):
-                card_item = CardItem(card, start_x + i * 90, y)
+                card_item = CardItem(card, start_x + i * card_spacing, y, width=card_width)
                 self.scene.addItem(card_item)
                 self.hand_cards.append(card_item)
         
         # 显示提示信息
-        info_text = QGraphicsTextItem(f"当前阶段: {self.game.phase}  |牌堆剩余: {len(self.game.deck.cards)}")
+        info_text = QGraphicsTextItem(f"当前阶段: {self.game.phase}  |牌堆剩余: {len(self.game.deck.cards)}  |玩家数: {n}人")
         info_text.setPos(50, 20)
         font = QFont("Arial", 12)
         info_text.setFont(font)
