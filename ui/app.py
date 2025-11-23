@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from ui.table.scene import GameView
-from ui.dialogs import HeroSelectDialog, RoleSelectDialog
+from ui.dialogs import HeroSelectDialog, RoleSelectDialog, DiscardDialog
 from engine.game import Game, setup_demo_game
 from engine.player import Player
 from engine.hero import get_random_heroes
@@ -19,11 +19,14 @@ class MainWindow(QMainWindow):
         self.game = game
 
         central = QWidget()
-        main_layout = QHBoxLayout(central)
-
+        main_layout = QVBoxLayout(central)  # 改为垂直布局
+        
+        # 上部区域：牵桌 + 右侧信息
+        top_layout = QHBoxLayout()
+        
         # 主视图（牌桌）
         self.view = GameView(self.game)
-        main_layout.addWidget(self.view, stretch=2)
+        top_layout.addWidget(self.view, stretch=2)
 
         # 右侧区域
         right_widget = QWidget()
@@ -31,33 +34,135 @@ class MainWindow(QMainWindow):
         
         # 游戏信息
         info_label = QLabel("游戏信息")
+        info_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #333;")
         right_layout.addWidget(info_label)
         
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         self.info_text.setMaximumHeight(150)
+        self.info_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 8px;
+                font-size: 13px;
+            }
+        """)
         right_layout.addWidget(self.info_text)
         
-        # 操作按钮
-        btn_label = QLabel("操作")
-        right_layout.addWidget(btn_label)
-        
-        self.btn_use = QPushButton("出牌 (U)")
-        self.btn_end = QPushButton("结束回合 (E)")
-        self.btn_restart = QPushButton("重新开始 (R)")
-        right_layout.addWidget(self.btn_use)
-        right_layout.addWidget(self.btn_end)
+        # 重新开始按钮放在右侧
+        self.btn_restart = QPushButton("🔄 重新开始")
+        self.btn_restart.setStyleSheet("""
+            QPushButton {
+                background-color: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #f57c00;
+            }
+            QPushButton:pressed {
+                background-color: #e65100;
+            }
+        """)
         right_layout.addWidget(self.btn_restart)
         
         # 日志
         log_label = QLabel("游戏日志")
+        log_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #333; margin-top: 10px;")
         right_layout.addWidget(log_label)
         
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
+        self.log_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 8px;
+                font-size: 12px;
+            }
+        """)
         right_layout.addWidget(self.log_text)
         
-        main_layout.addWidget(right_widget, stretch=1)
+        top_layout.addWidget(right_widget, stretch=1)
+        main_layout.addLayout(top_layout)
+        
+        # 底部区域：操作按钮
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addStretch()
+        
+        # 出牌按钮
+        self.btn_use = QPushButton("⚔️ 出牌 (U)")
+        self.btn_use.setFixedSize(140, 50)
+        self.btn_use.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4CAF50, stop:1 #45a049);
+                color: white;
+                border: 2px solid #45a049;
+                border-radius: 10px;
+                padding: 10px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #5CBF60, stop:1 #4CAF50);
+                border: 2px solid #4CAF50;
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3d8b40, stop:1 #357a38);
+            }
+        """)
+        bottom_layout.addWidget(self.btn_use)
+        
+        # 结束回合按钮
+        self.btn_end = QPushButton("⏸️ 结束回合 (E)")
+        self.btn_end.setFixedSize(140, 50)
+        self.btn_end.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2196F3, stop:1 #1976D2);
+                color: white;
+                border: 2px solid #1976D2;
+                border-radius: 10px;
+                padding: 10px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #42A5F5, stop:1 #2196F3);
+                border: 2px solid #2196F3;
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1565C0, stop:1 #0D47A1);
+            }
+        """)
+        bottom_layout.addWidget(self.btn_end)
+        
+        bottom_layout.addStretch()
+        
+        # 添加底部边距
+        bottom_widget = QWidget()
+        bottom_widget.setLayout(bottom_layout)
+        bottom_widget.setStyleSheet("""
+            QWidget {
+                background-color: #fafafa;
+                border-top: 2px solid #ddd;
+                padding: 10px;
+            }
+        """)
+        main_layout.addWidget(bottom_widget)
+        
         self.setCentralWidget(central)
 
         # 绑定事件
@@ -77,6 +182,8 @@ class MainWindow(QMainWindow):
         self.game.event_bus.on("card_effect_done", self.on_card_effect_done)
         # 监听出闪事件
         self.game.event_bus.on("dodge_used", self.on_dodge_used_event)
+        # 监听弃牌阶段
+        self.game.event_bus.on("discard_phase", self.on_discard_phase)
         
         self.log("游戏开始！")
         self.log(f"你的身份：{self._get_role_name(selected_role)}")
@@ -111,6 +218,28 @@ class MainWindow(QMainWindow):
         # 在杀的动画之后稍微延迟显示闪
         from PySide6.QtCore import QTimer
         QTimer.singleShot(1000, lambda: self.view.show_card_in_center(card, source, None))
+    
+    def on_discard_phase(self, player, count, **kwargs):
+        """处理弃牌阶段"""
+        # 显示弃牌对话框
+        dialog = DiscardDialog(player, count, self)
+        if dialog.exec():
+            selected_indices = dialog.get_selected_indices()
+            # 调用游戏引擎的弃牌方法
+            self.game.discard_cards(selected_indices)
+            
+            # 刷新界面
+            self.view.refresh()
+            self.update_info()
+            
+            # 检查游戏是否结束
+            if self.game.phase == "game_over":
+                return
+            
+            self.log(f"轮到 {self.game.current_player.name} 的回合")
+            
+            # 如果AI回合自动结束，继续切换直到玩家回合
+            self.auto_play_ai_turns()
     
     def log(self, message):
         """添加日志"""
@@ -257,6 +386,7 @@ class MainWindow(QMainWindow):
         self.game.event_bus.on("card_used", self.on_card_used_event)
         self.game.event_bus.on("card_effect_done", self.on_card_effect_done)
         self.game.event_bus.on("dodge_used", self.on_dodge_used_event)
+        self.game.event_bus.on("discard_phase", self.on_discard_phase)
         
         self.log("游戏重新开始！")
         self.log(f"你的身份：{self._get_role_name(selected_role)}")

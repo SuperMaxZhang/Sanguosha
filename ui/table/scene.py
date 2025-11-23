@@ -342,14 +342,20 @@ class GameView(QGraphicsView):
             if p is self.game.current_player:
                 panel.setPen(QPen(QColor(255, 100, 100), 4))
         
-        # 底部显示当前玩家的手牌
-        current = self.game.current_player
-        start_x = 50
-        y = 550
-        for i, card in enumerate(current.hand):
-            card_item = CardItem(card, start_x + i * 90, y)
-            self.scene.addItem(card_item)
-            self.hand_cards.append(card_item)
+        # 底部只显示玩家自己的手牌（不是AI的那个）
+        player = None
+        for p in self.game.players:
+            if not p.is_ai:
+                player = p
+                break
+        
+        if player:
+            start_x = 50
+            y = 550
+            for i, card in enumerate(player.hand):
+                card_item = CardItem(card, start_x + i * 90, y)
+                self.scene.addItem(card_item)
+                self.hand_cards.append(card_item)
         
         # 显示提示信息
         info_text = QGraphicsTextItem(f"当前阶段: {self.game.phase}  |牌堆剩余: {len(self.game.deck.cards)}")

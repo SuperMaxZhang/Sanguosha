@@ -66,12 +66,30 @@ class Game:
     def next_turn(self):
         """结束当前回合，进入下一个玩家的回合"""
         # 弃牌阶段：手牌数不能超过体力值
-        while len(self.current_player.hand) > self.current_player.hp and len(self.current_player.hand) > 0:
-            # 简化：弃置最后一张
-            card = self.current_player.hand.pop()
-            self.deck.discard(card)
-            self.log(f"{self.current_player.name} 弃置了 {card}")
+        discard_count = len(self.current_player.hand) - self.current_player.hp
+        if discard_count > 0:
+            self.log(f"{self.current_player.name} 需要弃置 {discard_count} 张牌")
+            
+            if self.current_player.is_ai:
+                # AI自动弃牌：弃置最后的牌
+                discarded_cards = []
+                for _ in range(discard_count):
+                    if len(self.current_player.hand) > 0:
+                        card = self.current_player.hand.pop()
+                        self.deck.discard(card)
+                        discarded_cards.append(card.name)
+                self.log(f"{self.current_player.name} 弃置了：{', '.join(discarded_cards)}")
+            else:
+                # 玩家需要选择弃牌，触发事件
+                self.emit_event("discard_phase", player=self.current_player, count=discard_count)
+                # 注意：UI会处理这个事件，不在这里自动弃牌
+                return  # 等待UI处理完毕后调用finish_turn
         
+        # 如果不需要弃牌，直接结束回合
+        self.finish_turn()
+    
+    def finish_turn(self):
+        """完成回合结束，切换到下一个玩家"""
         # 检查玩家是否死亡
         if self.current_player.hp <= 0:
             self.current_player.is_alive = False
@@ -112,6 +130,24 @@ class Game:
         # 如果是AI玩家，自动执行
         if self.current_player.is_ai:
             self.ai_play_turn()
+    
+    def discard_cards(self, card_indices):
+        """弃置指定的牌（由UI调用）"""
+        # 按索引从大到小排序，避免删除时索引错乱
+        card_indices = sorted(card_indices, reverse=True)
+        discarded_cards = []
+        
+        for idx in card_indices:
+            if 0 <= idx < len(self.current_player.hand):
+                card = self.current_player.hand.pop(idx)
+                self.deck.discard(card)
+                discarded_cards.append(card.name)
+        
+        if discarded_cards:
+            self.log(f"{self.current_player.name} 弃置了：{', '.join(discarded_cards)}")
+        
+        # 继续完成回合
+        self.finish_turn()
     
     def ai_play_turn(self):
         """执行AI回合"""
